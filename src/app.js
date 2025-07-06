@@ -37,9 +37,42 @@ app.get("/user", userAuth, async (req, res) => {
     }
 })
 
+app.delete("/user", userAuth, async (req, res) => {
+    try {
+        const email = req.body.emailId;
+        const user = await User.findOneAndDelete(email);
+        if (user) {
+            // await User.deleteOne({ emailId: email });
+            res.send({ message: "deleted successfully!", user });
+        } else {
+            res.send("user not found!")
+        }
+    } catch (error) {
+        res.status(400).send("Error in fetch all users:" + error.message);
+    }
+})
+
+app.patch("/user", userAuth, async (req, res) => {
+    try {
+        const email = req.body.emailId;
+        const data = req.body;
+        // option new updated data return
+        const user = await User.findOneAndUpdate({ emailId: email }, data, { new: true });
+        if (user) {
+            // await User.deleteOne({ emailId: email });
+            res.send({ message: "updated successfully!", user });
+        } else {
+            res.send("user not found!")
+        }
+    } catch (error) {
+        res.status(400).send("Error in fetch all users:" + error.message);
+    }
+})
+
 app.get("/users", async (req, res) => {
     try {
-        const users = await User.find({});
+        // exclude 'password'
+        const users = await User.find({}).select("-password");
         res.send(users);
     } catch (error) {
         res.status(400).send("Error in fetch all users:" + error.message);
