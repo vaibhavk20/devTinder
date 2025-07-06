@@ -5,24 +5,44 @@ const { userAuth, adminAuth } = require('./middlewares/auth');
 const User = require('./models/user');
 
 
+
 const app = express();
 
-app.get("/user", userAuth, (req, res) => {
-    res.send("this is user route.")
-})
+app.use(express.json());
+
+
 
 app.post("/signup", async (req, res) => {
-    const user = new User({
-        firstName: "vaibhav",
-        lastName: "Kale",
-        emailId: "vaibhav@gmail.com",
-        password: "vaibhav123"
-    })
+    const user = new User(req.body)
     try {
         await user.save();
         res.send("Signup successfully!")
     } catch (error) {
         res.status(400).send("Error saving the user:" + error.message);
+    }
+})
+
+app.get("/user", userAuth, async (req, res) => {
+    try {
+        const email = req.body.emailId;
+        const user = await User.findOne({ emailId: email });
+        if (user) {
+
+            res.send(user);
+        } else {
+            res.send("user not found!")
+        }
+    } catch (error) {
+        res.status(400).send("Error in fetch all users:" + error.message);
+    }
+})
+
+app.get("/users", async (req, res) => {
+    try {
+        const users = await User.find({});
+        res.send(users);
+    } catch (error) {
+        res.status(400).send("Error in fetch all users:" + error.message);
     }
 })
 
