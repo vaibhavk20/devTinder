@@ -16,6 +16,8 @@ app.post("/signup", async (req, res) => {
     const user = new User(req.body)
     try {
         await user.save();
+        // Run this once at app start or in script        
+        await User.syncIndexes(); 
         res.send("Signup successfully!")
     } catch (error) {
         res.status(400).send("Error saving the user:" + error.message);
@@ -40,7 +42,7 @@ app.get("/user", userAuth, async (req, res) => {
 app.delete("/user", userAuth, async (req, res) => {
     try {
         const email = req.body.emailId;
-        const user = await User.findOneAndDelete(email);
+        const user = await User.findOneAndDelete({ emailId: email });
         if (user) {
             // await User.deleteOne({ emailId: email });
             res.send({ message: "deleted successfully!", user });
@@ -52,17 +54,25 @@ app.delete("/user", userAuth, async (req, res) => {
     }
 })
 
-app.patch("/user", userAuth, async (req, res) => {
+app.patch("/user/:userId", userAuth, async (req, res) => {
     try {
+        const userId = req.params?.userId;
         const email = req.body.emailId;
         const data = req.body;
+
+        const allowed_updates = ["age", "skills", "gender"];
+
+        const isUpdatedAllowed = Object.keys(data).every(k => allowed_updates.includes(k));
+        if (!isUpdatedAllowed) {
+            throw new Error("Invalid update fields.")
+        }
         // option new updated data return
-        const user = await User.findOneAndUpdate({ emailId: email }, data, { new: true });
+        const user = await User.findByIdAndUpdate({ _id: userId }, data, { new: true, runValidators: true });
         if (user) {
             // await User.deleteOne({ emailId: email });
             res.send({ message: "updated successfully!", user });
         } else {
-            res.send("user not found!")
+            res.send("user not exist!")
         }
     } catch (error) {
         res.status(400).send("Error in fetch all users:" + error.message);
