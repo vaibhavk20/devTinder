@@ -51,20 +51,18 @@ app.post("/login", async (req, res) => {
             throw new Error("Invalid credential.");
         }
 
-        const isPasswordValid = await bcrypt.compare(password, user.password);
+        const isPasswordValid = await user.validatePassword(password);
         console.log("pass is : ", isPasswordValid)
         if (isPasswordValid) {
+            const token = await user.getJWT()
 
-            const token = jwt.sign({ _id: user._id }, 'vaibhav@kale', { expiresIn: '1d' });
             res.cookie("token", token, {
                 expires: new Date(Date.now() + 8 * 3600000)
             });
-            // cookie will be removed after 8 hours
             res.send("Login successfull.");
         } else {
             throw new Error("Invalid Credential.");
         }
-
     } catch (error) {
         res.status(400).send("ERROR :" + error.message);
     }
