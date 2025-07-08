@@ -5,13 +5,13 @@ const { userAuth, adminAuth } = require('./middlewares/auth');
 const User = require('./models/user');
 const { validateSignUpData, validateLoginData } = require('./utils/validaton');
 const bcrypt = require('bcrypt')
-
-
+const cookieParser = require('cookie-parser')
+const jwt = require('jsonwebtoken');
 
 const app = express();
 
 app.use(express.json());
-
+app.use(cookieParser());
 
 
 app.post("/signup", async (req, res) => {
@@ -54,6 +54,12 @@ app.post("/login", async (req, res) => {
         const isPasswordValid = await bcrypt.compare(password, user.password);
         console.log("pass is : ", isPasswordValid)
         if (isPasswordValid) {
+
+            const token = jwt.sign({ _id: user._id }, 'vaibhav@kale', { expiresIn: '1d' });
+            res.cookie("token", token, {
+                expires: new Date(Date.now() + 8 * 3600000)
+            });
+            // cookie will be removed after 8 hours
             res.send("Login successfull.");
         } else {
             throw new Error("Invalid Credential.");
@@ -62,6 +68,11 @@ app.post("/login", async (req, res) => {
     } catch (error) {
         res.status(400).send("ERROR :" + error.message);
     }
+})
+
+app.get("/profile", userAuth, async (req, res) => {
+    const { user } = req;
+    res.send({ "user": user });
 })
 
 app.get("/user", userAuth, async (req, res) => {
@@ -119,7 +130,7 @@ app.patch("/user/:userId", userAuth, async (req, res) => {
     }
 })
 
-app.get("/users", async (req, res) => {
+app.get("/users", userAuth, async (req, res) => {
     try {
         // exclude 'password'
         const users = await User.find({}).select("-password");
