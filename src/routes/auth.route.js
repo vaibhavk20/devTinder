@@ -16,7 +16,6 @@ authRouter.post("/signup", async (req, res) => {
         // ecrypte the password
 
         const passwordHash = await bcrypt.hash(password, 10);
-        console.log(passwordHash)
 
         const user = new User({
             firstName, lastName, emailId, password: passwordHash, skills
@@ -55,6 +54,12 @@ authRouter.post("/login", async (req, res) => {
     } catch (error) {
         res.status(400).send("ERROR :" + error.message);
     }
+})
+
+authRouter.post("/logout", async (req, res) => {
+    res.cookie("token", null, {
+        expires: new Date(Date.now())
+    }).send();
 })
 
 module.exports = authRouter;

@@ -2,13 +2,14 @@ const express = require('express');
 const profileRouter = express.Router();
 const { userAuth, adminAuth } = require('../middlewares/auth');
 const User = require('../models/user');
-const { validateSignUpData, validateLoginData } = require('../utils/validaton');
+const { validateSignUpData, validateLoginData, validateEditProfileData, validateNewPassword } = require('../utils/validaton');
 const bcrypt = require('bcrypt')
 const cookieParser = require('cookie-parser')
 const jwt = require('jsonwebtoken');
 
 
 profileRouter.get("/profile", userAuth, async (req, res) => {
+    // user get from the userAuth middleware
     const { user } = req;
     res.send({ "user": user });
 })
@@ -43,29 +44,50 @@ profileRouter.delete("/user", userAuth, async (req, res) => {
     }
 })
 
-profileRouter.patch("/user/:userId", userAuth, async (req, res) => {
+profileRouter.patch("/profile/edit", userAuth, async (req, res) => {
     try {
-        const userId = req.params?.userId;
-        const email = req.body.emailId;
-        const data = req.body;
+        validateEditProfileData(req);
 
-        const allowed_updates = ["age", "skills", "gender"];
+        const loggedInUser = req.user;
 
-        const isUpdatedAllowed = Object.keys(data).every(k => allowed_updates.includes(k));
-        if (!isUpdatedAllowed) {
-            throw new Error("Invalid update fields.")
-        }
-        // option new updated data return
-        const user = await User.findByIdAndUpdate({ _id: userId }, data, { new: true, runValidators: true });
-        if (user) {
-            // await User.deleteOne({ emailId: email });
-            res.send({ message: "updated successfully!", user });
-        } else {
-            res.send("user not exist!")
-        }
+        Object.keys(req.body).forEach((field) => {
+            loggedInUser[field] = req.body[field];
+        })
+
+        await loggedInUser.save();
+
+        res.send({ message: "updated successfully!", user: loggedInUser });
+
     } catch (error) {
         res.status(400).send("Error in fetch all users:" + error.message);
     }
+})
+
+
+profileRouter.patch("/profile/password", userAuth, async (req, res) => {
+    const { oldPassword, newPassword } = req.body;
+    console.log(newPassword)
+    const loggedInUser = req.user;
+    console.log(loggedInUser)
+    const isOldPasswordCorrect = await loggedInUser.validatePassword(oldPassword)
+
+    if (!isOldPasswordCorrect) {
+        throw new Error("please enter correct password")
+    }
+    validateNewPassword(req);
+
+    const newPasswordHashed = await bcrypt.hash(newPassword, 10);
+
+
+    loggedInUser.password = newPasswordHashed;
+
+    await loggedInUser.save();
+
+    res.send({
+        message: "Password updated successfully.",
+        user: loggedInUser
+    })
+
 })
 
 profileRouter.get("/users", userAuth, async (req, res) => {
